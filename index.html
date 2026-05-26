@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Invitaciones — HCD San Vicente</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --azul:    #0e3a6e;
+      --azul2:   #1a5fa8;
+      --celeste: #2196c4;
+      --gris:    #6b7280;
+      --fondo:   #f0f4f9;
+      --blanco:  #ffffff;
+      --verde:   #10b981;
+      --rojo:    #ef4444;
+      --naranja: #f59e0b;
+      --borde:   #e2e8f0;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--fondo);
+      min-height: 100vh;
+      color: #1e293b;
+    }
+
+    /* ── HEADER ── */
+    .top-bar {
+      background: linear-gradient(135deg, var(--azul) 0%, #1a5fa8 100%);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(14,58,110,0.25);
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-hcd {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      color: #fff;
+      letter-spacing: 2px;
+    }
+    .logo-hcd span { color: var(--celeste); }
+
+    .logo-sep {
+      width: 1.5px;
+      height: 32px;
+      background: rgba(255,255,255,0.25);
+    }
+
+    .logo-sub {
+      font-size: 10px;
+      font-weight: 300;
+      color: rgba(255,255,255,0.65);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      line-height: 1.5;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.8);
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #6ee7b7;
+      box-shadow: 0 0 6px #6ee7b7;
+    }
+
+    /* ── LAYOUT ── */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    /* ── MÉTRICAS ── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .metric-card {
+      background: var(--blanco);
+      border-radius: 14px;
+      padding: 20px 22px;
+      border: 1px solid var(--borde);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .metric-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(14,58,110,0.09); }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 4px; height: 100%;
+      border-radius: 14px 0 0 14px;
+    }
+    .metric-card.azul::before   { background: var(--celeste); }
+    .metric-card.verde::before  { background: var(--verde); }
+    .metric-card.naranja::before{ background: var(--naranja); }
+    .metric-card.rojo::before   { background: var(--rojo); }
+
+    .metric-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--gris);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-size: 32px;
+      font-weight: 600;
+      color: var(--azul);
+      line-height: 1;
+    }
+
+    .metric-sub {
+      font-size: 12px;
+      color: var(--gris);
+      margin-top: 6px;
+    }
+
+    .metric-icon {
+      position: absolute;
+      top: 16px; right: 16px;
+      font-size: 28px;
+      opacity: 0.12;
+    }
+
+    /* ── PROGRESS BAR ── */
+    .progress-wrap {
+      background: var(--blanco);
+      border-radius: 14px;
+      padding: 20px 24px;
+      border: 1px solid var(--borde);
+      margin-bottom: 28px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .progress-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--azul);
+    }
+
+    .progress-pct {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--celeste);
+    }
+
+    .progress-track {
+      background: #e9f1fb;
+      border-radius: 100px;
+      height: 10px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, var(--celeste), #1a7ecf);
+      transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--gris);
+    }
+
+    /* ── PANEL PRINCIPAL ── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: var(--blanco);
+      border-radius: 16px;
+      border: 1px solid var(--borde);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--borde);
+    }
+
+    .panel-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      color: var(--azul);
+    }
+
+    .panel-sub {
+      font-size: 13px;
+      color: var(--gris);
+      margin-top: 4px;
+    }
+
+    .panel-body {
+      padding: 24px;
+    }
+
+    /* ── FORM ── */
+    .field {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 7px;
+      letter-spacing: 0.2px;
+    }
+
+    .label-badge {
+      display: inline-block;
+      background: #f0f7ff;
+      color: var(--celeste);
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 100px;
+      margin-left: 6px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    textarea, input[type="text"], input[type="url"] {
+      width: 100%;
+      border: 1.5px solid var(--borde);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: #1e293b;
+      background: #fafcff;
+      outline: none;
+      resize: vertical;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    textarea:focus, input[type="text"]:focus, input[type="url"]:focus {
+      border-color: var(--celeste);
+      box-shadow: 0 0 0 3px rgba(33,150,196,0.12);
+      background: #fff;
+    }
+
+    textarea { min-height: 120px; line-height: 1.6; }
+
+    .char-count {
+      font-size: 11px;
+      color: var(--gris);
+      text-align: right;
+      margin-top: 4px;
+    }
+
+    /* ── PREVIEW ── */
+    .preview-box {
+      background: #f8fafc;
+      border: 1.5px dashed #c8d9ef;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.7;
+    }
+
+    .preview-box strong {
+      color: var(--azul);
+      font-weight: 600;
+    }
+
+    .preview-box .link-demo {
+      display: inline-block;
+      color: var(--celeste);
+      font-weight: 500;
+      margin-top: 8px;
+      font-size: 12px;
+    }
+
+    /* ── BOTÓN ── */
+    .btn-enviar {
+      width: 100%;
+      background: linear-gradient(135deg, var(--azul) 0%, var(--azul2) 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 15px 24px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: opacity 0.2s, transform 0.15s;
+      letter-spacing: 0.2px;
+    }
+
+    .btn-enviar:hover:not(:disabled) {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    .btn-enviar:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-enviar svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    /* ── SIDEBAR ── */
+    .sidebar-section {
+      background: var(--blanco);
+      border-radius: 16px;
+      border: 1px solid var(--borde);
+      margin-bottom: 20px;
+    }
+
+    /* ── LOG ── */
+    .log-wrap {
+      padding: 16px 18px;
+    }
+
+    .log-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--azul);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .log-box {
+      height: 220px;
+      overflow-y: auto;
+      border: 1px solid var(--borde);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #f8fafc;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+
+    .log-item {
+      padding: 3px 0;
+      display: flex;
+      gap: 6px;
+      align-items: flex-start;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .log-item:last-child { border-bottom: none; }
+
+    .log-time { color: #94a3b8; white-space: nowrap; }
+    .log-ok   { color: #059669; }
+    .log-err  { color: #dc2626; }
+    .log-info { color: #2196c4; }
+
+    /* ── STATS SIDEBAR ── */
+    .stats-wrap {
+      padding: 16px 18px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--borde);
+      font-size: 13px;
+    }
+
+    .stat-row:last-child { border-bottom: none; }
+    .stat-label { color: var(--gris); }
+    .stat-value { font-weight: 600; color: var(--azul); }
+    .stat-value.ok { color: var(--verde); }
+    .stat-value.warn { color: var(--naranja); }
+
+    /* ── ALERTA ── */
+    .alerta {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-bottom: 20px;
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.5;
+    }
+
+    .alerta.visible { display: flex; }
+    .alerta-ok   { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+    .alerta-err  { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+    .alerta-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+
+    .alerta svg { flex-shrink: 0; margin-top: 1px; }
+
+    /* ── SPINNER ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* ── EMAILJS LIMIT CARD ── */
+    .limit-bar-wrap {
+      padding: 16px 18px;
+    }
+
+    .limit-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .limit-label { color: var(--gris); font-weight: 500; }
+    .limit-val   { font-weight: 600; color: var(--azul); }
+
+    .limit-track {
+      background: #e9f1fb;
+      border-radius: 100px;
+      height: 8px;
+      overflow: hidden;
+    }
+
+    .limit-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, #10b981, #059669);
+      transition: width 0.5s;
+    }
+
+    .limit-fill.warn {
+      background: linear-gradient(90deg, var(--naranja), #d97706);
+    }
+
+    .limit-note {
+      font-size: 11px;
+      color: var(--gris);
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="logo-area">
+    <div>
+      <div class="logo-hcd"><span>HCD</span></div>
+      <div class="logo-sub">Honorable Concejo Deliberante · San Vicente</div>
+    </div>
+    <div class="logo-sep"></div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.8);font-weight:500;">Panel de Invitaciones</div>
+  </div>
+  <div class="status-bar">
+    <div class="dot" id="dot-conexion"></div>
+    <span id="txt-conexion">Conectando...</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- MÉTRICAS -->
+  <div class="metrics-grid">
+    <div class="metric-card azul">
+      <div class="metric-label">Total inscriptos</div>
+      <div class="metric-value" id="m-total">—</div>
+      <div class="metric-sub">Registros en la tabla</div>
+      <div class="metric-icon">👥</div>
+    </div>
+    <div class="metric-card verde">
+      <div class="metric-label">Verificados</div>
+      <div class="metric-value" id="m-verificados">—</div>
+      <div class="metric-sub">Confirmaron su email</div>
+      <div class="metric-icon">✅</div>
+    </div>
+    <div class="metric-card naranja">
+      <div class="metric-label">Pendientes de invitar</div>
+      <div class="metric-value" id="m-pendientes">—</div>
+      <div class="metric-sub">Con email verificado</div>
+      <div class="metric-icon">📩</div>
+    </div>
+    <div class="metric-card rojo">
+      <div class="metric-label">Ya invitados</div>
+      <div class="metric-value" id="m-invitados">—</div>
+      <div class="metric-sub">Recibieron Meet</div>
+      <div class="metric-icon">🎯</div>
+    </div>
+  </div>
+
+  <!-- BARRA DE PROGRESO GENERAL -->
+  <div class="progress-wrap">
+    <div class="progress-header">
+      <span class="progress-title">Progreso de invitaciones enviadas</span>
+      <span class="progress-pct" id="pct-valor">0%</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+    <div class="progress-labels">
+      <span id="pct-enviados">0 enviados</span>
+      <span id="pct-total">de 0 verificados</span>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- PANEL IZQUIERDO: FORMULARIO -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Redactar invitación</div>
+        <div class="panel-sub">Los correos se envían en tandas de hasta 200 desde EmailJS via Gmail</div>
+      </div>
+      <div class="panel-body">
+
+        <div id="alerta" class="alerta">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="alerta-texto"></span>
+        </div>
+
+        <div class="field">
+          <label>Mensaje personalizado <span class="label-badge">texto libre</span></label>
+          <textarea id="textarea_mensaje" placeholder="Escribí el cuerpo del mensaje. Ej: Estimado/a {{name}}, te invitamos a participar de nuestra sesión especial..." oninput="actualizarPreview(); contarChars()"></textarea>
+          <div class="char-count"><span id="char-count">0</span> caracteres</div>
+        </div>
+
+        <div class="field">
+          <label>Enlace de Google Meet</label>
+          <input type="url" id="input_meet" placeholder="https://meet.google.com/abc-defg-hij" oninput="actualizarPreview()">
+        </div>
+
+        <div class="field">
+          <label>Enlace del Grupo de WhatsApp</label>
+          <input type="url" id="input_whatsapp" placeholder="https://chat.whatsapp.com/..." oninput="actualizarPreview()">
+        </div>
+
+        <!-- PREVIEW -->
+        <div style="margin-bottom:20px;">
+          <div style="font-size:12px;font-weight:600;color:var(--gris);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Vista previa del correo</div>
+          <div class="preview-box" id="preview-box">
+            <em style="color:#9ca3af;">Completá los campos para ver la vista previa...</em>
+          </div>
+        </div>
+
+        <button class="btn-enviar" id="btn-enviar" onclick="enviarInvitacionesMasivas()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Enviar tanda de 200 correos
+        </button>
+
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div>
+
+      <!-- LOG DE ENVÍOS -->
+      <div class="sidebar-section">
+        <div class="log-wrap">
+          <div class="log-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            Registro de la sesión
+          </div>
+          <div class="log-box" id="log-box">
+            <div class="log-item">
+              <span class="log-time">--:--:--</span>
+              <span class="log-info">Sistema iniciado. Esperando acción.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATS DE SESIÓN -->
+      <div class="sidebar-section">
+        <div class="stats-wrap">
+          <div style="font-size:13px;font-weight:600;color:var(--azul);margin-bottom:10px;">Esta sesión</div>
+          <div class="stat-row">
+            <span class="stat-label">Enviados ahora</span>
+            <span class="stat-value ok" id="s-enviados">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Errores</span>
+            <span class="stat-value" id="s-errores">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Tiempo transcurrido</span>
+            <span class="stat-value" id="s-tiempo">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Tiempo estimado</span>
+            <span class="stat-value" id="s-estimado">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CUOTA EMAILJS -->
+      <div class="sidebar-section">
+        <div class="limit-bar-wrap">
+          <div style="font-size:13px;font-weight:600;color:var(--azul);margin-bottom:12px;">Cuota mensual EmailJS</div>
+          <div class="limit-header">
+            <span class="limit-label">Solicitudes usadas</span>
+            <span class="limit-val"><span id="q-usados">9</span> / 200</span>
+          </div>
+          <div class="limit-track">
+            <div class="limit-fill" id="q-fill" style="width:4.5%"></div>
+          </div>
+          <div class="limit-note" id="q-note">191 solicitudes disponibles · Reinicia Jun 26</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+  /* ── CREDENCIALES ── */
+  const SUPABASE_URL     = 'https://zpepnwxedkrnvifelszv.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwZXBud3hlZGtybnZpZmVsc3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NzY4OTMsImV4cCI6MjA5NTE1Mjg5M30.sQ0UWfkbIYES8HLCWImZs9oPfBTu8Bb5Sj7qJ9B0ncE';
+  const EMAILJS_PUBLIC_KEY  = 'cK6ZyH0WkQFGBh4Ny'; // ← reemplazá con tu Public Key de EmailJS
+  const EMAILJS_SERVICE_ID  = 'service_ti3mdiy';
+  const EMAILJS_TEMPLATE_ID = 'template_znwqn8e'; // ← reemplazá con el ID de tu template de invitación
+
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  emailjs.init(EMAILJS_PUBLIC_KEY);
+
+  /* ── ESTADO SESIÓN ── */
+  let sEnviados = 0, sErrores = 0, sTiempoInicio = null;
+
+  /* ── UTILIDADES ── */
+  function ahora() {
+    return new Date().toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  }
+
+  function log(msg, tipo = 'info') {
+    const box = document.getElementById('log-box');
+    const div = document.createElement('div');
+    div.className = 'log-item';
+    div.innerHTML = `<span class="log-time">${ahora()}</span><span class="log-${tipo}">${msg}</span>`;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function mostrarAlerta(tipo, msg) {
+    const el = document.getElementById('alerta');
+    el.className = `alerta visible alerta-${tipo}`;
+    document.getElementById('alerta-texto').textContent = msg;
+  }
+
+  function ocultarAlerta() {
+    document.getElementById('alerta').className = 'alerta';
+  }
+
+  function setConexion(ok) {
+    document.getElementById('dot-conexion').style.background = ok ? '#6ee7b7' : '#f87171';
+    document.getElementById('dot-conexion').style.boxShadow  = ok ? '0 0 6px #6ee7b7' : '0 0 6px #f87171';
+    document.getElementById('txt-conexion').textContent = ok ? 'Conectado a Supabase' : 'Sin conexión';
+  }
+
+  function tiempoTranscurrido(inicio) {
+    const seg = Math.floor((Date.now() - inicio) / 1000);
+    if (seg < 60) return `${seg}s`;
+    const min = Math.floor(seg / 60);
+    return `${min}m ${seg % 60}s`;
+  }
+
+  /* ── CONTEO CHARS ── */
+  function contarChars() {
+    const n = document.getElementById('textarea_mensaje').value.length;
+    document.getElementById('char-count').textContent = n;
+  }
+
+  /* ── PREVIEW ── */
+  function actualizarPreview() {
+    const msg  = document.getElementById('textarea_mensaje').value;
+    const meet = document.getElementById('input_meet').value;
+    const wa   = document.getElementById('input_whatsapp').value;
+    const box  = document.getElementById('preview-box');
+
+    if (!msg && !meet && !wa) {
+      box.innerHTML = '<em style="color:#9ca3af;">Completá los campos para ver la vista previa...</em>';
+      return;
+    }
+
+    box.innerHTML = `
+      <strong>Para:</strong> nombre@email.com<br>
+      <strong>Asunto:</strong> Invitación — Concejal por un día<br><br>
+      ${msg ? msg.replace(/\n/g, '<br>') : '<em style="color:#9ca3af;">(sin mensaje aún)</em>'}
+      ${meet ? `<div class="link-demo">📹 Meet: ${meet}</div>` : ''}
+      ${wa   ? `<div class="link-demo">💬 WhatsApp: ${wa}</div>` : ''}
+    `;
+  }
+
+  /* ── CARGAR MÉTRICAS ── */
+  async function cargarMetricas() {
+    try {
+      const { data, error } = await db.from('inscripciones').select('is_verified, invitado_meet');
+      if (error) throw error;
+
+      setConexion(true);
+      const total      = data.length;
+      const verificados = data.filter(r => r.is_verified).length;
+      const invitados  = data.filter(r => r.invitado_meet).length;
+      const pendientes = data.filter(r => r.is_verified && !r.invitado_meet).length;
+
+      document.getElementById('m-total').textContent      = total;
+      document.getElementById('m-verificados').textContent = verificados;
+      document.getElementById('m-invitados').textContent  = invitados;
+      document.getElementById('m-pendientes').textContent = pendientes;
+
+      const pct = verificados > 0 ? Math.round((invitados / verificados) * 100) : 0;
+      document.getElementById('pct-valor').textContent   = pct + '%';
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('pct-enviados').textContent = `${invitados} enviados`;
+      document.getElementById('pct-total').textContent   = `de ${verificados} verificados`;
+
+    } catch (e) {
+      setConexion(false);
+      log('Error al cargar métricas: ' + e.message, 'err');
+    }
+  }
+
+  /* ── ENVÍO ── */
+  async function enviarInvitacionesMasivas() {
+    const msg  = document.getElementById('textarea_mensaje').value.trim();
+    const meet = document.getElementById('input_meet').value.trim();
+    const wa   = document.getElementById('input_whatsapp').value.trim();
+
+    if (!msg || !meet || !wa) {
+      mostrarAlerta('err', 'Completá todos los campos antes de enviar.');
+      return;
+    }
+
+    ocultarAlerta();
+
+    const btn = document.getElementById('btn-enviar');
+
+    /* Traer pendientes verificados */
+    const { data: usuarios, error } = await db
+      .from('inscripciones')
+      .select('id, email, nombre')
+      .eq('invitado_meet', false)
+      .eq('is_verified', true)
+      .limit(200);
+
+    if (error) {
+      log('Error consultando Supabase: ' + error.message, 'err');
+      mostrarAlerta('err', 'No se pudo consultar la base de datos.');
+      return;
+    }
+
+    if (!usuarios || usuarios.length === 0) {
+      mostrarAlerta('info', '¡No hay pendientes! Ya se enviaron invitaciones a todos los verificados.');
+      log('No hay destinatarios pendientes.', 'info');
+      return;
+    }
+
+    if (!confirm(`Vas a enviar ${usuarios.length} correos. ¿Confirmar?`)) return;
+
+    /* Estado envío */
+    btn.disabled = true;
+    btn.innerHTML = `<div class="spinner"></div> Enviando (0 / ${usuarios.length})...`;
+    sTiempoInicio = Date.now();
+    sEnviados = 0;
+    sErrores  = 0;
+
+    log(`Iniciando envío de ${usuarios.length} correos...`, 'info');
+
+    const timerInterval = setInterval(() => {
+      document.getElementById('s-tiempo').textContent = tiempoTranscurrido(sTiempoInicio);
+    }, 1000);
+
+    for (let i = 0; i < usuarios.length; i++) {
+      const u = usuarios[i];
+      const restante = (usuarios.length - i) * 1.2;
+      const minEst = Math.ceil(restante / 60);
+      document.getElementById('s-estimado').textContent = minEst > 0 ? `~${minEst} min` : 'finalizando';
+
+      try {
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          email:                 u.email,
+          name:                  u.nombre,
+          mensaje_personalizado: msg,
+          link_meet:             meet,
+          link_whatsapp:         wa
+        });
+
+        await db.from('inscripciones').update({ invitado_meet: true }).eq('id', u.id);
+
+        sEnviados++;
+        document.getElementById('s-enviados').textContent = sEnviados;
+        log(`✓ Enviado a ${u.email}`, 'ok');
+
+      } catch (err) {
+        sErrores++;
+        document.getElementById('s-errores').textContent = sErrores;
+        log(`✗ Error con ${u.email}: ${err.text || err}`, 'err');
+      }
+
+      btn.innerHTML = `<div class="spinner"></div> Enviando (${i+1} / ${usuarios.length})...`;
+
+      if (i < usuarios.length - 1) {
+        await new Promise(r => setTimeout(r, 1200));
+      }
+    }
+
+    clearInterval(timerInterval);
+
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Enviar tanda de 200 correos`;
+
+    log(`Tanda completa. ${sEnviados} enviados, ${sErrores} errores.`, sErrores > 0 ? 'err' : 'ok');
+    mostrarAlerta('ok', `¡Tanda completada! ${sEnviados} invitaciones enviadas con éxito. ${sErrores > 0 ? `${sErrores} errores registrados en el log.` : ''}`);
+
+    cargarMetricas();
+  }
+
+  /* ── CUOTA EMAILJS (visual fija con lo que se ve en pantalla) ── */
+  function actualizarCuota(usados = 9, limite = 200) {
+    const pct = Math.round((usados / limite) * 100);
+    const restante = limite - usados;
+    document.getElementById('q-usados').textContent = usados;
+    const fill = document.getElementById('q-fill');
+    fill.style.width = pct + '%';
+    if (pct > 70) fill.classList.add('warn');
+    document.getElementById('q-note').textContent = `${restante} solicitudes disponibles · Reinicia Jun 26`;
+  }
+
+  /* ── INIT ── */
+  cargarMetricas();
+  actualizarCuota(9, 200);
+  setInterval(cargarMetricas, 30000);
+</script>
+
+</body>
+</html>
