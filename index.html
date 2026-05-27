@@ -6,7 +6,9 @@
   <title>Panel de Invitaciones — HCD San Vicente</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script //src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <!-- //EROS funcion vieja
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  //EROS -->
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -673,15 +675,16 @@
   /* ── CREDENCIALES ── */
   const SUPABASE_URL     = 'https://zpepnwxedkrnvifelszv.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwZXBud3hlZGtybnZpZmVsc3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NzY4OTMsImV4cCI6MjA5NTE1Mjg5M30.sQ0UWfkbIYES8HLCWImZs9oPfBTu8Bb5Sj7qJ9B0ncE';
- //EROS 
-  //const EMAILJS_PUBLIC_KEY  = 'y47DkZbZtGD-3uimd'; // ← reemplazá con tu Public Key de EmailJS
-  //const EMAILJS_SERVICE_ID  = 'service_ti3mdiy';
-  //const EMAILJS_TEMPLATE_ID = 'template_hn5uc7g'; // ← reemplazá con el ID de tu template de invitación
-//EROS
+ //EROS //const EMAILJS_PUBLIC_KEY  = 'y47DkZbZtGD-3uimd'; // ← reemplazá con tu Public Key de EmailJS
+ //EROS //const EMAILJS_SERVICE_ID  = 'service_ti3mdiy';
+ //EROS  //const EMAILJS_TEMPLATE_ID = 'template_hn5uc7g'; // ← reemplazá con el ID de tu template de invitación
+
   const { createClient } = supabase;
   const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
- //EROS emailjs.init(EMAILJS_PUBLIC_KEY); //EROS
+  //EROS funcion vieja
+  // emailjs.init(EMAILJS_PUBLIC_KEY);
+  //EROS
 
   /* ── ESTADO SESIÓN ── */
   let sEnviados = 0, sErrores = 0, sTiempoInicio = null;
@@ -778,9 +781,9 @@
       log('Error al cargar métricas: ' + e.message, 'err');
     }
   }
-// EROS
+
   /* ── ENVÍO ── */
- /* async function enviarInvitacionesMasivas() {
+  async function enviarInvitacionesMasivas() {
     const msg  = document.getElementById('textarea_mensaje').value.trim();
     const meet = document.getElementById('input_meet').value.trim();
     const wa   = document.getElementById('input_whatsapp').value.trim();
@@ -794,7 +797,7 @@
 
     const btn = document.getElementById('btn-enviar');
 
-    /* Traer pendientes verificados
+    /* Traer pendientes verificados */
     const { data: usuarios, error } = await db
       .from('inscripciones')
       .select('id, email, nombre')
@@ -816,7 +819,7 @@
 
     if (!confirm(`Vas a enviar ${usuarios.length} correos. ¿Confirmar?`)) return;
 
-    /* Estado envío /
+    /* Estado envío */
     btn.disabled = true;
     btn.innerHTML = `<div class="spinner"></div> Enviando (0 / ${usuarios.length})...`;
     sTiempoInicio = Date.now();
@@ -834,28 +837,50 @@
       const restante = (usuarios.length - i) * 1.2;
       const minEst = Math.ceil(restante / 60);
       document.getElementById('s-estimado').textContent = minEst > 0 ? `~${minEst} min` : 'finalizando';
-       // esta es la funcion que estaba enviando los mensajes a emailjs EROS
-      
-       /*try {
-        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-          email:                 u.email,
-          name:                  u.nombre,
-          mensaje_personalizado: msg,
-          link_meet:             meet,
-          link_whatsapp:         wa
-       });
 
+      //EROS funcion vieja
+      // try {
+      //   await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      //     email: u.email, name: u.nombre, mensaje_personalizado: msg, link_meet: meet, link_whatsapp: wa
+      //   });
+      //   await db.from('inscripciones').update({ invitado_meet: true }).eq('id', u.id);
+      //   sEnviados++;
+      //   document.getElementById('s-enviados').textContent = sEnviados;
+      //   log(`✓ Enviado a ${u.email}`, 'ok');
+      // } catch (err) {
+      //   sErrores++;
+      //   document.getElementById('s-errores').textContent = sErrores;
+      //   log(`✗ Error con ${u.email}: ${err.text || err}`, 'err');
+      // }
+      //EROS
+
+      //EROS funcion nueva
+      try {
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwoMTEZTPsnA-3TWduXc-aXOijsQ1jFXtaFhNti9BAvgqogqyudzd4XKyd-GQEcGHnm/exec';
+        const TOKEN_SECRETO = 'HCD_SanVicente_2026_Secure_Key';
+        await fetch(GAS_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            token:         TOKEN_SECRETO,
+            email:         u.email,
+            name:          u.nombre,
+            mensaje:       msg,
+            link_meet:     meet,
+            link_whatsapp: wa
+          })
+        });
         await db.from('inscripciones').update({ invitado_meet: true }).eq('id', u.id);
-
         sEnviados++;
         document.getElementById('s-enviados').textContent = sEnviados;
         log(`✓ Enviado a ${u.email}`, 'ok');
-
       } catch (err) {
         sErrores++;
         document.getElementById('s-errores').textContent = sErrores;
-        log(`✗ Error con ${u.email}: ${err.text || err}`, 'err');
+        log(`✗ Error con ${u.email}: ${err.message || err}`, 'err');
       }
+      //EROS
 
       btn.innerHTML = `<div class="spinner"></div> Enviando (${i+1} / ${usuarios.length})...`;
 
@@ -873,131 +898,9 @@
     mostrarAlerta('ok', `¡Tanda completada! ${sEnviados} invitaciones enviadas con éxito. ${sErrores > 0 ? `${sErrores} errores registrados en el log.` : ''}`);
 
     cargarMetricas();
-  }*/ //EROS
-
-  // esta es la funcion nueva con mi enviador de mensajes  EROS
-      
-  
-  
-  
- async function enviarInvitacionesMasivas() {
-  const msg  = document.getElementById('textarea_mensaje').value.trim();
-  const meet = document.getElementById('input_meet').value.trim();
-  const wa   = document.getElementById('input_whatsapp').value.trim();
-
-  if (!msg || !meet || !wa) {
-    mostrarAlerta('err', 'Completá todos los campos antes de enviar.');
-    return;
   }
 
-  ocultarAlerta();
-  const btn = document.getElementById('btn-enviar');
-
-  if (!confirm("¿Confirmar el envío de invitaciones a través del servidor?")) return;
-
-  /* Estado envío */
-  btn.disabled = true;
-  btn.innerHTML = `<div class="spinner"></div> Enviando...`;
-
-  log(`Iniciando envío masivo a través del servidor...`, 'info');
-  
-  // ─── 1. TRAER LOS USUARIOS PENDIENTES DE LA BASE DE DATOS ───
-  const { data: usuarios, error: dbErr } = await db
-    .from('inscripciones')
-    .select('*')
-    .eq('invitado_meet', false)
-    .eq('is_verified', true) // <-- CORREGIDO: Filtro crítico de seguridad para enviar sólo a verificados
-    .limit(200);
-
-  if (dbErr) {
-    log(`Error al obtener usuarios: ${dbErr.message}`, 'err');
-    mostrarAlerta('err', 'No se pudieron cargar los usuarios de la base de datos.');
-    btn.disabled = false;
-    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Enviar tanda de 200 correos`;
-    return;
-  }
-
-  if (!usuarios || usuarios.length === 0) {
-    log('No hay usuarios pendientes de invitación.', 'info');
-    mostrarAlerta('ok', 'No hay usuarios pendientes de envío.');
-    btn.disabled = false;
-    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Enviar tanda de 200 correos`;
-    return;
-  }
-
-  // Inicializamos los contadores locales de la tanda
-  sTiempoInicio = Date.now(); // CORREGIDO: Inicializa el tiempo para que funcione la barra lateral
-  sEnviados = 0; // CORREGIDO: Se quitó el 'let' para que actualice la variable global del panel
-  sErrores = 0;  // CORREGIDO: Se quitó el 'let' para que actualice la variable global del panel
-  let timerInterval = setInterval(() => {
-    document.getElementById('s-tiempo').textContent = tiempoTranscurrido(sTiempoInicio);
-  }, 1000); // CORREGIDO: Ahora actualiza activamente el tiempo transcurrido en pantalla
-
-  // ─── 2. EL BUCLE FOR (Esto es lo que te faltaba abrir) ───
-  for (let i = 0; i < usuarios.length; i++) {
-    const u = usuarios[i];
-
-    // CORREGIDO: Cálculo automático del tiempo estimado restante en la barra lateral
-    const restante = (usuarios.length - i) * 1.2;
-    const minEst = Math.ceil(restante / 60);
-    document.getElementById('s-estimado').textContent = minEst > 0 ? `~${minEst} min` : 'finalizando';
-
-    try {
-      // Envío con tu nuevo sistema (reemplazá la URL por la tuya)
-      const response = await fetch('https://script.google.com/macros/s/AKfycbwoMTEZTPsnA-3TWduXc-aXOijsQ1jFXtaFhNti9BAvgqogqyudzd4XKyd-GQEcGHnm/exec', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }, // quitamos la cabecera 'apikey' que era para Supabase, no para Google
-        body: JSON.stringify({ 
-          token: "HCD_SanVicente_2026_Secure_Key", // <-- EL MISMO TOKEN QUE PUSISTE EN GOOGLE
-          email: u.email, 
-          name: u.nombre, 
-          mensaje: msg, 
-          link_meet: meet, 
-          link_whatsapp: wa
-        })
-      });
-
-      if (!response.ok) throw new Error('Error en el envío');
-
-      // Marca en la base de datos que ya se invitó
-      await db.from('inscripciones').update({ invitado_meet: true }).eq('id', u.id);
-
-      // Suma al contador y avisa en el log
-      sEnviados++;
-      document.getElementById('s-enviados').textContent = sEnviados;
-      log(`✓ Enviado a ${u.email}`, 'ok');
-
-    } catch (err) {
-      sErrores++;
-      document.getElementById('s-errores').textContent = sErrores;
-      log(`✗ Error con ${u.email}: ${err.message || err}`, 'err');
-    }
-
-    // Actualiza el botoncito y hace la pausa de 1.2s antes del siguiente
-    btn.innerHTML = `<div class="spinner"></div> Enviando (${i+1} / ${usuarios.length})...`;
-
-    if (i < usuarios.length - 1) {
-      await new Promise(r => setTimeout(r, 1200));
-    }
-  } // <-- ESTA LLAVE CIERRA EL BUCLE FOR correctamente
-
-  // ─── 3. CUANDO TERMINA TODO EL BUCLE ───
-  clearInterval(timerInterval);
-
-  btn.disabled = false;
-  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Enviar tanda de 200 correos`;
-
-  log(`Tanda completa. ${sEnviados} enviados, ${sErrores} errores.`, sErrores > 0 ? 'err' : 'ok');
-  mostrarAlerta('ok', `¡Tanda completada! ${sEnviados} invitaciones enviadas con éxito. ${sErrores > 0 ? `${sErrores} errores registrados en el log.` : ''}`);
-
-  cargarMetricas();
-} // <-- ACÁ TERMINA LA FUNCIÓN PRINCIPAL
-// aca termina mi nueva funcion EROS
-
-
-
-
-    /* ── CUOTA EMAILJS (visual fija con lo que se ve en pantalla) ── */
+  /* ── CUOTA EMAILJS (visual fija con lo que se ve en pantalla) ── */
   function actualizarCuota(usados = 9, limite = 200) {
     const pct = Math.round((usados / limite) * 100);
     const restante = limite - usados;
