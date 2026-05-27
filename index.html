@@ -651,18 +651,25 @@
         </div>
       </div>
 
-      <!-- CUOTA EMAILJS -->
+      <!-- RESET INVITACIONES -->
       <div class="sidebar-section">
         <div class="limit-bar-wrap">
-          <div style="font-size:13px;font-weight:600;color:var(--azul);margin-bottom:12px;">Cuota mensual EmailJS</div>
-          <div class="limit-header">
-            <span class="limit-label">Solicitudes usadas</span>
-            <span class="limit-val"><span id="q-usados">9</span> / 200</span>
+          <div style="font-size:13px;font-weight:600;color:var(--azul);margin-bottom:6px;">🔁 Reiniciar invitaciones</div>
+          <div style="font-size:12px;color:var(--gris);margin-bottom:14px;line-height:1.5;">Pone todos los <code>invitado_meet</code> en <strong>false</strong> para poder enviar una nueva tanda.</div>
+          <div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+              <span style="color:var(--gris);">Ya invitados</span>
+              <span style="font-weight:600;color:var(--azul);" id="reset-count">—</span>
+            </div>
+            <div class="limit-track">
+              <div class="limit-fill" id="reset-fill" style="width:0%"></div>
+            </div>
           </div>
-          <div class="limit-track">
-            <div class="limit-fill" id="q-fill" style="width:4.5%"></div>
-          </div>
-          <div class="limit-note" id="q-note">191 solicitudes disponibles · Reinicia Jun 26</div>
+          <button onclick="resetearInvitaciones()" id="btn-reset"
+            style="width:100%;background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:8px;padding:10px 16px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:opacity 0.2s;">
+            Resetear todos a false
+          </button>
+          <div id="reset-msg" style="font-size:12px;margin-top:8px;text-align:center;display:none;"></div>
         </div>
       </div>
 
@@ -912,8 +919,43 @@
   }
 
   /* ── INIT ── */
+  /* ── RESET INVITACIONES ── */
+  async function resetearInvitaciones() {
+    const invitados = parseInt(document.getElementById('m-invitados').textContent) || 0;
+    if (invitados === 0) {
+      mostrarMsgReset('⚠️ No hay invitados para resetear.', '#f59e0b');
+      return;
+    }
+    if (!confirm(`¿Seguro? Esto va a poner ${invitados} no terminaste de enviar a todos corres el riesgo de enviar el correo duplicado.`)) return;
+    const btn = document.getElementById('btn-reset');
+    btn.disabled = true;
+    btn.textContent = 'Reseteando...';
+    try {
+      const { error } = await db
+        .from('inscripciones')
+        .update({ invitado_meet: false })
+        .eq('invitado_meet', true);
+      if (error) throw error;
+      log(`🔁 Reset completado. ${invitados} registros vueltos a Reseteados.`, 'info');
+      mostrarMsgReset('✓ Reset exitoso. Ya podés enviar una nueva tanda.', '#10b981');
+      cargarMetricas();
+    } catch(err) {
+      log('✗ Error al resetear: ' + err.message, 'err');
+      mostrarMsgReset('✗ Error: ' + err.message, '#ef4444');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Resetear Para volver a enviar;
+  }
+
+  function mostrarMsgReset(msg, color) {
+    const el = document.getElementById('reset-msg');
+    el.textContent = msg;
+    el.style.color = color;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+
   cargarMetricas();
-  actualizarCuota(9, 200);
   setInterval(cargarMetricas, 30000);
 </script>
 
