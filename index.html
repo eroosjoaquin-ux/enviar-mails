@@ -552,7 +552,7 @@
     </div>
     <div class="progress-labels">
       <span id="pct-enviados">0 enviados</span>
-      <span id="pct-total">de 0 verificados</span>
+      <span id="pct-total">de 0 inscriptos</span>
     </div>
   </div>
 
@@ -649,15 +649,24 @@
       <!-- CUOTA EMAILJS -->
       <div class="sidebar-section">
         <div class="limit-bar-wrap">
-          <div style="font-size:13px;font-weight:600;color:var(--azul);margin-bottom:12px;">Cuota mensual EmailJS</div>
-          <div class="limit-header">
-            <span class="limit-label">Solicitudes usadas</span>
-            <span class="limit-val"><span id="q-usados">9</span> / 200</span>
+          <div style="font-size:13px;font-weight:600;color:var(--azul);margin-bottom:4px;">Preparar nueva tanda de correos</div>
+          <div style="font-size:12px;color:var(--gris);margin-bottom:14px;line-height:1.5;">
+            Usá este botón cuando querés volver a enviarle correos a personas que ya recibieron una invitación anterior. Esto las marca nuevamente como pendientes.
           </div>
-          <div class="limit-track">
-            <div class="limit-fill" id="q-fill" style="width:4.5%"></div>
+          <div style="margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+              <span style="color:var(--gris);">Ya invitados actualmente</span>
+              <span style="font-weight:600;color:var(--azul);" id="reset-count">—</span>
+            </div>
+            <div class="limit-track">
+              <div class="limit-fill" id="reset-fill" style="width:0%"></div>
+            </div>
           </div>
-          <div class="limit-note" id="q-note">191 solicitudes disponibles · Reinicia Jun 26</div>
+          <button onclick="resetearInvitaciones()" id="btn-reset"
+            style="width:100%;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:8px;padding:11px 16px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:opacity 0.2s;">
+            🔄 Marcar todos como pendientes nuevamente
+          </button>
+          <div id="reset-msg" style="font-size:12px;margin-top:8px;text-align:center;display:none;"></div>
         </div>
       </div>
 
@@ -760,7 +769,6 @@
       const pendientes = data.filter(r => !r.invitado_meet).length;
 
       document.getElementById('m-total').textContent      = total;
-      document.getElementById('m-verificados').textContent = verificados;
       document.getElementById('m-invitados').textContent  = invitados;
       document.getElementById('m-pendientes').textContent = pendientes;
 
@@ -791,7 +799,7 @@
 
     const btn = document.getElementById('btn-enviar');
 
-    /* Traer pendientes verificados */
+    /* Traer pendientes */
     const { data: usuarios, error } = await db
       .from('inscripciones')
       .select('id, email, nombre')
@@ -805,7 +813,7 @@
     }
 
     if (!usuarios || usuarios.length === 0) {
-      mostrarAlerta('info', '¡No hay pendientes! Ya se enviaron invitaciones a todos los verificados.');
+      mostrarAlerta('info', '¡No hay pendientes! Ya se enviaron invitaciones a todos los inscriptos.');
       log('No hay destinatarios pendientes.', 'info');
       return;
     }
@@ -905,8 +913,43 @@
   }
 
   /* ── INIT ── */
+  /* ── RESET INVITACIONES ── */
+  async function resetearInvitaciones() {
+    const invitados = parseInt(document.getElementById('m-invitados').textContent) || 0;
+    if (invitados === 0) {
+      mostrarMsgReset('⚠️ No hay invitados para marcar como pendientes.', '#f59e0b');
+      return;
+    }
+    if (!confirm(`Esto va a marcar ${invitados} personas como pendientes nuevamente, para que puedan recibir otra tanda de correos. ¿Confirmás?`)) return;
+    const btn = document.getElementById('btn-reset');
+    btn.disabled = true;
+    btn.textContent = 'Procesando...';
+    try {
+      const { error } = await db
+        .from('inscripciones')
+        .update({ invitado_meet: false })
+        .eq('invitado_meet', true);
+      if (error) throw error;
+      log(`🔄 ${invitados} personas marcadas como pendientes nuevamente.`, 'info');
+      mostrarMsgReset('✓ Listo. Ya podés enviar una nueva tanda.', '#10b981');
+      cargarMetricas();
+    } catch(err) {
+      log('✗ Error al resetear: ' + err.message, 'err');
+      mostrarMsgReset('✗ Error: ' + err.message, '#ef4444');
+    }
+    btn.disabled = false;
+    btn.textContent = '🔄 Marcar todos como pendientes nuevamente';
+  }
+
+  function mostrarMsgReset(msg, color) {
+    const el = document.getElementById('reset-msg');
+    el.textContent = msg;
+    el.style.color = color;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 5000);
+  }
+
   cargarMetricas();
-  actualizarCuota(9, 200);
   setInterval(cargarMetricas, 30000);
 </script>
 
